@@ -1,29 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Homework 10</title>
-    <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://unpkg.com/slim-select@latest/dist/slimselect.css" />
-
+    <title>Goit-js-hw-10</title>
   </head>
-  <body class="body-bg">
-
-  <div class="container">
-    <select class="breed-select" id="single">
-    </select>
-    <p class="loader"></p>
-    <p class="error">Oops! Something  went wrong! Try reloading the page!</p>
-    
-    <div class="cat-info"></div>
-  </div>
-
-
-    <!-- <p class="loader">Loading data, please wait...</p> -->
-
-
-
-    <script src="index.js" type="module"></script>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../node_modules/basiclightbox/dist/basicLightbox.min.css">
+    <script type="module" src="./index.js"></script>
+  </head>
+  <body>
+    <!-- ❗️❗️❗️ Add partials like so for every page -->
+    <div class="container">
+      <div class="selectEl">
+        <select id="selectElement">
+        </select>
+        <button class="btn-refresh" type="button">Refresh</button>
+      </div>  
+      <div class="showcase">
+        <span class="loader is-hidden"></span>
+      </div>      
+      <div class="showcase">
+        <span class="loader_cat is-hidden"></span>
+      </div>
+      <div class="cat-container"></div>
+      </div>
+    </div>   
   </body>
 </html>

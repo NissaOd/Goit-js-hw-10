@@ -1,100 +1,143 @@
-// import SlimSelect from 'slim-select'
-// import refs from "./refs"
-// new SlimSelect({
-//   select: '#single'
-// })
+import { Report } from 'notiflix/build/notiflix-report-aio';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import * as basicLightbox from 'basiclightbox';
+import SlimSelect from 'slim-select';
+import 'slim-select/dist/slimselect.css';
+import { fetchBreeds, fetchCatByBreed } from './cat-api';
 
-const urlBreeds = `https://api.thecatapi.com/v1/breeds`;
-const api_key =
-  'live_Mfoctkyb81AdTnvkuASKbgDMF3qZlosxU5mxt0kho40Taaq9x32aHUfQTzhcu54D';
-
-  const refs = {
-  // select: new SlimSelect({
-  //     select: '#selectElement'
-  //   }),
-  select: document.querySelector('.breed-select'),
-  catInfo: document.querySelector('.cat-info'),
-  loaderEl: document.querySelector('.loader'),
-  errorEl: document.querySelector('.error'),
-  bodyEl: document.body,
+const ref = {
+  select: document.querySelector('.selectEl'),
+  loader_round: document.querySelector('.loader_cat'),
+  loader_line: document.querySelector('.loader'),
+  cat_container: document.querySelector('.cat-container'),
+  btn_refresh: document.querySelector('.btn-refresh'),
 };
 
-refs.errorEl.classList.add('is-hidden');
-refs.loaderEl.classList.add('is-hidden');
-
-fetch(urlBreeds, {
-  headers: {
-    'x-api-key': api_key,
+const selectEl = new SlimSelect({
+  select: '#selectElement',
+  settings: {
+    allowDeselect: true,
   },
-})
-  .then(response => {
-    if (!response.ok) {
-      throw new Error();
-    } else {
-      return response.json();
-    }
-  })
-  .then(data => fillSelect(data))
-  .catch(error => refs.errorEl.classList.remove('is-hidden'));
+  data: [{ placeholder: true, text: "Here search Cat's" }],
+  events: {
+    afterChange: newVal => {
+      if (newVal.length === 0 || newVal[0].text === "Here search Cat's") {
+        clearContainerCat();
+        return;
+      }
+      showLoadingCatElement('load');
+      loadContentIntoHtml(newVal);
+    },
+  },
+});
 
-function fillSelect(cats) {
-  const catsArr = cats
-    .map(
-      cat => `
-    <option value="${cat.id}">${cat.name}</option>
-    `
-    )
-    .join('');
-  refs.select.insertAdjacentHTML('beforeend', catsArr);
+ref.cat_container.addEventListener('click', onClickFullImageView);
+ref.btn_refresh.addEventListener('click', loadContentIntoSelect);
+
+loadContentIntoSelect();
+
+function markupCat({ url, name, description, temperament, origin }) {
+  const catElement = `<img src="${url}" alt="${name}" width="500">
+        <div class="cat">
+          <h1 class="cat-name">${name}</h1>
+          <p class="cat-description">${description}</p>
+          <p class="cat-temperament">Temperament: ${temperament}</p>
+          <p class="cat-origin">Country: ${origin}</p>`;
+
+  ref.cat_container.innerHTML = catElement;
 }
 
-refs.select.addEventListener('change', setOutput);
+function loadContentIntoSelect() {
+  clearContainerCat();
+  showLoadingElements('load');
 
-function setOutput(event) {
-  event.preventDefault();
-  const selectedOptionValue = refs.select.value;
-  //   const selectedOptionIndex = refs.select.selectedIndex;
-  const selectedOptionText =
-    refs.select.options[refs.select.selectedIndex].text;
-  const urlImages = `https://api.thecatapi.com/v1/images/search?breed_ids=${selectedOptionValue}`;
-
-  fetch(urlImages, {
-    headers: {
-      'x-api-key': api_key,
-    },
-  })
+  fetchBreeds()
     .then(response => {
-      if (!response.ok) {
-        throw new Error();
-      } else {
-        return response.json();
-      }
-    })
-    .then(data => {
-      refs.catInfo.innerHTML = '';
-      refs.catInfo.classList.add('is-hidden');
-      refs.loaderEl.classList.remove('is-hidden');
-
-      renderCat(...data);
+      const dataSlimSelect = [{ placeholder: true, text: "Here search Cat's" }];
+      response.data.map(cat => {
+        dataSlimSelect.push({ text: cat.name, value: cat.id });
+      });
+      selectEl.setData(dataSlimSelect);
     })
     .catch(error => {
-      refs.catInfo.innerHTML = '';
-      refs.errorEl.classList.remove('is-hidden');
+      Report.failure('Search Error', error.message, 'Okay');
     })
-    .finally(() => {
-      setTimeout(() => {
-        refs.loaderEl.classList.add('is-hidden');
-        refs.catInfo.classList.remove('is-hidden');
-      }, 1000);
+    .finally(showLoadingElements);
+}
+
+function loadContentIntoHtml(breedId) {
+  return fetchCatByBreed(breedId[0].value)
+    .then(response => {
+      const {
+        url,
+        breeds: [{ name, description, temperament, origin }],
+      } = response.data[0];
+
+      markupCat({ url, name, description, temperament, origin });
+      showLoadingCatElement();
+    })
+    .catch(error => {
+      Notify.failure(error.message);
+      showLoadingCatElement();
+      clearContainerCat();
     });
 }
 
-function renderCat(cat) {
-  const breeds = { ...cat.breeds[0] };
-  const markup = `      
-    <img src="${cat.url}" alt="">
-    <h2>${breeds.name}</h2>
-    <p>${breeds.description}</p>
-    <p>${breeds.temperament}</p>`;
-  refs.catInfo.insertAdjacentHTML('beforeend', markup);
+function onClickFullImageView(e) {
+  e.preventDefault();
+
+  const isImgTeg = e.target.nodeName === 'IMG';
+
+  if (!isImgTeg) {
+    return;
+  }
+
+  const sourceClickedItem = e.target.src;
+  const descriptionImg = e.target.alt;
+  basicLightboxEl = basicLightbox.create(
+    `
+            <img
+                src="${sourceClickedItem}"
+                alt="${descriptionImg}"     
+            />        
+        `,
+    {
+      onClose: instance => {
+        window.removeEventListener('keydown', onClickEsc);
+      },
+      onShow: instance => {
+        window.addEventListener('keydown', onClickEsc);
+      },
+    }
+  );
+  basicLightboxEl.show();
+}
+
+function onClickEsc(evt) {
+  const ESCAPE = 'Escape';
+  const keyClicked = evt.key;
+
+  if (keyClicked === ESCAPE) {
+    basicLightboxEl.close();
+  }
+}
+
+function clearContainerCat() {
+  ref.cat_container.innerHTML = '';
+}
+
+function showLoadingElements(status) {
+  if (status === 'load') {
+    ref.select.classList.add('is-hidden');
+    ref.loader_line.classList.remove('is-hidden');
+  } else {
+    ref.select.classList.remove('is-hidden');
+    ref.loader_line.classList.add('is-hidden');
+  }
+}
+
+function showLoadingCatElement(status) {
+  status === 'load'
+    ? ref.loader_round.classList.remove('is-hidden')
+    : ref.loader_round.classList.add('is-hidden');
 }
